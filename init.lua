@@ -419,7 +419,7 @@ require('lazy').setup({
       local builtin = require 'telescope.builtin'
       vim.keymap.set('n', '<leader>sh', builtin.help_tags, { desc = '[S]earch [H]elp' })
       vim.keymap.set('n', '<leader>sk', builtin.keymaps, { desc = '[S]earch [K]eymaps' })
-      vim.keymap.set('n', '<leader>sf', builtin.find_files, { desc = '[S]earch [F]iles' })
+      vim.keymap.set('n', '<C-p>', builtin.find_files, { desc = '[S]earch [F]iles' }) -- shortcut was '<leader>sf' where <leader> is space.
       vim.keymap.set('n', '<leader>ss', builtin.builtin, { desc = '[S]earch [S]elect Telescope' })
       vim.keymap.set('n', '<leader>sw', builtin.grep_string, { desc = '[S]earch current [W]ord' })
       vim.keymap.set('n', '<leader>sg', builtin.live_grep, { desc = '[S]earch by [G]rep' })
@@ -465,6 +465,25 @@ require('lazy').setup({
         { path = '${3rd}/luv/library', words = { 'vim%.uv' } },
       },
     },
+  },
+  {
+    'stevearc/oil.nvim',
+    opts = {},
+    dependencies = {
+      { 'echasnovski/mini.icons', opts = {} },
+    },
+    lazy = false,
+    config = function()
+      require('oil').setup {
+        -- Other configuration options can go here
+        view_options = {
+          show_hidden = true, -- Set this to true to show hidden files
+        },
+      }
+
+      -- Set the keymap: press "-" to open Oil in the current directory
+      vim.keymap.set('n', '-', '<CMD>Oil<CR>', { desc = 'Open Oil file explorer' })
+    end,
   },
   {
     -- Main LSP Configuration
@@ -721,7 +740,17 @@ require('lazy').setup({
             -- by the server configuration above. Useful when disabling
             -- certain features of an LSP (for example, turning off formatting for ts_ls)
             server.capabilities = vim.tbl_deep_extend('force', {}, capabilities, server.capabilities or {})
-            require('lspconfig')[server_name].setup(server)
+            local lspconfig = require 'lspconfig'
+            lspconfig[server_name].setup(server)
+            lspconfig.compose_language_server.setup {
+              filetypes = { 'yaml', 'yml' }, -- Specify the file types
+              root_dir = function(fname)
+                return lspconfig.util.root_pattern('docker-compose.yml', 'docker-compose.yaml')(fname) or lspconfig.util.root_pattern('*.yml', '*.yaml')(fname)
+              end,
+              on_attach = function(client, bufnr)
+                -- Your custom on_attach function (optional)
+              end,
+            }
           end,
         },
       }
@@ -763,10 +792,10 @@ require('lazy').setup({
       formatters_by_ft = {
         lua = { 'stylua' },
         -- Conform can also run multiple formatters sequentially
-        -- python = { "isort", "black" },
+        python = { 'black' },
         --
         -- You can use 'stop_after_first' to run the first available formatter from the list
-        -- javascript = { "prettierd", "prettier", stop_after_first = true },
+        javascript = { 'prettierd', 'prettier', stop_after_first = true },
       },
     },
   },
@@ -954,10 +983,28 @@ require('lazy').setup({
   { -- Highlight, edit, and navigate code
     'nvim-treesitter/nvim-treesitter',
     build = ':TSUpdate',
-    main = 'nvim-treesitter.configs', -- Sets main module to use for opts
+    config = function()
+      require('nvim-treesitter.configs').setup {opts} 
+    end, -- Sets main module to use for opts
     -- [[ Configure Treesitter ]] See `:help nvim-treesitter`
     opts = {
-      ensure_installed = { 'bash', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'vim', 'vimdoc' },
+      ensure_installed = {
+        'astro',
+        'bash',
+        'c',
+        'diff',
+        'html',
+        'javascript',
+        'lua',
+        'luadoc',
+        'markdown',
+        'markdown_inline',
+        'python',
+        'typescript',
+        'query',
+        'vim',
+        'vimdoc',
+      },
       -- Autoinstall languages that are not installed
       auto_install = true,
       highlight = {
@@ -1024,6 +1071,9 @@ require('lazy').setup({
     },
   },
 })
+
+require 'custom.plugins.init'
+-- require 'custom.plugins.lsp'
 
 -- The line beneath this is called `modeline`. See `:help modeline`
 -- vim: ts=2 sts=2 sw=2 et
